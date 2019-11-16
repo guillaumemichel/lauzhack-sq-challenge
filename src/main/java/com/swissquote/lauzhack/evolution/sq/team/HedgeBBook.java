@@ -24,8 +24,10 @@ public class HedgeBBook implements BBook {
 	private Map<Currency, BigDecimal> changeOnPrice = new HashMap<>();
 	private int t = 0;
 
+	private Thread thread;
+
 	HedgeBBook() {
-		new Thread(() -> {
+		thread = new Thread(() -> {
 			ReentrantLock l = new ReentrantLock();
 			while(true) {
 				if(t > 4) { improviseAdaptOvercome(); }
@@ -34,7 +36,8 @@ public class HedgeBBook implements BBook {
 				try { t += 1; } finally { l.unlock(); }
 				try { Thread.sleep(1000); } catch (Exception e) { }
 			}
-		}).start();
+		});
+		thread.start();
 	}
 
 	@Override
@@ -73,7 +76,7 @@ public class HedgeBBook implements BBook {
 
 	@Override
 	public void onTrade(Trade trade) {
-		System.out.println("trade t= "+t);
+		//System.out.println("trade t= "+t);
 		if(t > 2){
 			// Add what user wants to buy
 			currencyDemand.computeIfPresent(trade.base, (k, v) -> {
@@ -81,7 +84,6 @@ public class HedgeBBook implements BBook {
 				demands.set(t, demands.get(t).add(trade.quantity));
 				return demands;
 			});
-			System.out.println(t);
 			//BigDecimal rate = trade.base != Currency.CHF ? currencyPrice.get(trade.term).get(t-1) : new BigDecimal(1).divide(currencyPrice.get(trade.term).get(t-2),MathContext.DECIMAL128);
 			BigDecimal rate = trade.base != Currency.CHF ? currencyPrice.get(trade.base).get(t-1) : new BigDecimal(1).divide(currencyPrice.get(trade.term).get(t-1),MathContext.DECIMAL128);
 			// Remove what they give us in exchange
@@ -96,13 +98,14 @@ public class HedgeBBook implements BBook {
 
 			//improviseAdaptOvercome();
 		}
-		System.out.println("currency demand for " + trade.base.toString() + " "+ currencyDemand.get(trade.base));
-		System.out.println("currency demand for " + trade.term.toString() + " "+ currencyDemand.get(trade.term)); 
+		//System.out.println("currency demand for " + trade.base.toString() + " "+ currencyDemand.get(trade.base));
+		//System.out.println("currency demand for " + trade.term.toString() + " "+ currencyDemand.get(trade.term));
+		//System.out.println("prediction of demand for " + trade.term.toString() + " "+ currencyPredictions.get(trade.term));
 	}
 
 	@Override
 	public void onPrice(Price price) {
-		System.out.println("on price t= "+t);
+		//System.out.println("on price t= "+t);
 		Currency currency = price.base == Currency.CHF ? price.term : price.base;
 		BigDecimal rate = price.base == Currency.CHF ? new BigDecimal(1).divide(price.rate): price.rate;
 
@@ -119,7 +122,7 @@ public class HedgeBBook implements BBook {
 			BigDecimal change = currencyPrice.get(currency).get(t-1).divide(currencyPrice.get(currency).get(t-2), MathContext.DECIMAL128);
 			changeOnPrice.put(currency, change);
 		}
-		System.out.println("currency price for " + price.base.toString() + "to "+ price.term + " " +  currencyPrice.get(currency));
+		//System.out.println("currency price for " + price.base.toString() + "to "+ price.term + " " +  currencyPrice.get(currency));
 	}
 
 	private void predictCurrencies() {
@@ -132,22 +135,26 @@ public class HedgeBBook implements BBook {
 	private void improviseAdaptOvercome(){
 		for(Currency currency: Currency.values()) {
 			BigDecimal whatWeNeed = currencyPredictions.get(currency);
-			if(whatWeNeed != null){
+			BigDecimal mulFactor = changeOnPrice.get(currency);
+			int powFactor = 100;
+			if(whatWeNeed != null && mulFactor!=null){
+				mulFactor = mulFactor.pow(powFactor);
+				System.out.println("mulFactor " + mulFactor);
 				// If positive
 				if(whatWeNeed.abs().equals(whatWeNeed) && currency != Currency.CHF) {
-					BigDecimal mulFactor = currencyPrice.get(currency).get(t);
 					BigDecimal rate = currencyPrice.get(currency).get(t-1);
 					//bank.buy(new Trade(currency, Currency.CHF, whatWeNeed.multiply(mulFactor)));
 					//money.compute(currency,(k,x)->whatWeNeed.multiply(mulFactor).add(x));
 					buy(currency,Currency.CHF,whatWeNeed.multiply(mulFactor),rate);
+					//System.out.println("buy " + currency.toString() + "to sell "+ Currency.CHF.toString() + "  amount " +  whatWeNeed.multiply(mulFactor));
 				}
 				// If negative
 				if(!whatWeNeed.abs().equals(whatWeNeed) && currency != Currency.CHF) {
-					BigDecimal mulFactor = currencyPrice.get(currency).get(t);
 					BigDecimal rate = currencyPrice.get(currency).get(t-1);
 					//bank.buy(new Trade(Currency.CHF, currency, whatWeNeed.multiply(new BigDecimal(-1).multiply(mulFactor)).multiply(new BigDecimal(-1).multiply(currencyPrice.get(currency).get(t-1)))));
 					//money.compute()
 					sell(Currency.CHF,currency,whatWeNeed.multiply(mulFactor),rate);
+					//System.out.println("to buy " + Currency.CHF.toString() + "sell "+ currency.toString() + "  amount " +  whatWeNeed.multiply(mulFactor));
 				}
 
 				if(currency == Currency.CHF) {
@@ -157,6 +164,7 @@ public class HedgeBBook implements BBook {
 					for(Map.Entry<Currency, BigDecimal> entry: changeOnPrice.entrySet()) {
 						if(entry.getValue().subtract(max).compareTo(new BigDecimal(0)) > 0) { max = entry.getValue(); curr = entry.getKey(); }
 					}
+					max = max.pow(powFactor);
 					if(whatWeNeed.abs().equals(whatWeNeed)){
 						//bank.buy(new Trade(Currency.CHF,curr,whatWeNeed.multiply(max)));
 						buy(Currency.CHF,curr,whatWeNeed.multiply(max),rate);
@@ -175,6 +183,7 @@ public class HedgeBBook implements BBook {
 	}
 
 	private void buy(Currency buy, Currency sell, BigDecimal amountBuy, BigDecimal rate){
+		if(amountBuy.compareTo(new BigDecimal(0)) <= 0){return;}
 		bank.buy(new Trade(buy, sell , amountBuy));
 		money.compute(buy,(k,x)-> x.add(amountBuy));
 		if(buy == Currency.CHF){
@@ -185,7 +194,7 @@ public class HedgeBBook implements BBook {
 
 	}
 	private void sell(Currency buy, Currency sell, BigDecimal amountSell, BigDecimal rate){
-
+		if(amountSell.compareTo(new BigDecimal(0)) <= 0){return;}
 		money.compute(sell,(k,x)-> x.subtract(amountSell));
 		if(buy == Currency.CHF){
 			bank.buy(new Trade(buy, sell , amountSell.multiply(rate)));
@@ -194,5 +203,10 @@ public class HedgeBBook implements BBook {
 			bank.buy(new Trade(buy, sell , amountSell.multiply(rate).multiply(new BigDecimal(-1))));
 			money.compute(buy,(k,x)->x.subtract(amountSell.multiply(rate)));
 		}
+	}
+
+	public void stop() {
+		thread.stop();
+		System.out.println("stoooooooop");
 	}
 }

@@ -14,7 +14,7 @@ public class App {
 	 */
 	public static void main(String[] args) {
 		// Instantiate our BBook
-		BBook bBook = new HedgeBBook();
+		HedgeBBook bBook = new HedgeBBook();
 
 		// Create the application runner
 		SwissquoteEvolution app = new SwissquoteEvolutionBuilder().
@@ -29,6 +29,7 @@ public class App {
 
 		// Let's go !
 		app.run();
+		bBook.stop();
 
 		// Display the result as JSON in console (also available in the file at "Path")
 		System.out.println(app.logBook());
