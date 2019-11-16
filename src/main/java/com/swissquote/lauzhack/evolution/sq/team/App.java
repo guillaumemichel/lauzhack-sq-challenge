@@ -1,6 +1,7 @@
 package com.swissquote.lauzhack.evolution.sq.team;
 
 import com.swissquote.lauzhack.evolution.SwissquoteEvolutionBuilder;
+import com.swissquote.lauzhack.evolution.api.BBook;
 import com.swissquote.lauzhack.evolution.api.MarketProfile;
 import com.swissquote.lauzhack.evolution.api.SwissquoteEvolution;
 
@@ -13,15 +14,15 @@ public class App {
 	 */
 	public static void main(String[] args) {
 		// Instantiate our BBook
-		OurBBook ourBBook = new OurBBook();
+		BBook bBook = new HedgeBBook();
 
 		// Create the application runner
 		SwissquoteEvolution app = new SwissquoteEvolutionBuilder().
 				profile(MarketProfile.SOMETHING).
 				seed(1).
-				team("SQTeam").
-				bBook(ourBBook).
-				filePath("/home/").
+				team("H(steaks)").
+				bBook(bBook).
+				filePath("/Users/xavierpantet/Desktop/lauzhack-sq-challenge/").
 				interval(1).
 				steps(5000).
 				build();
