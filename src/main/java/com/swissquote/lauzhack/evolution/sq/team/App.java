@@ -19,9 +19,9 @@ public class App {
 		SwissquoteEvolution app = new SwissquoteEvolutionBuilder().
 				profile(MarketProfile.SOMETHING).
 				seed(1).
-				team("SQTeam").
+				team("SteackHashés").
 				bBook(ourBBook).
-				filePath("/home/").
+				filePath("~/Documents/Laushack2019/").
 				interval(1).
 				steps(5000).
 				build();
