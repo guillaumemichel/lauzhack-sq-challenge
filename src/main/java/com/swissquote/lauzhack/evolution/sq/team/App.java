@@ -14,7 +14,7 @@ public class App {
 	 */
 	public static void main(String[] args) {
 		// Instantiate our BBook
-		OurBBook ourBBook = new OurBBook();
+		
 		//ourBBook.onInit();
 
 		/*
@@ -26,9 +26,12 @@ public class App {
 		*/
 		
 		// Create the application runner
+		for(MarketProfile p : MarketProfile.values()) {
+		System.out.println(p);
+		OurBBook ourBBook = new OurBBook();
 		SwissquoteEvolution app = new SwissquoteEvolutionBuilder().
-				profile(MarketProfile.STARTUP).
-				seed(1).
+				profile(p).
+				seed(1806).
 				team("steaks").
 				bBook(ourBBook).
 				filePath("/home/goodwine/Documents/Laushack2019/new_strat/").
@@ -40,6 +43,7 @@ public class App {
 		app.run();
 		app.logBook();
 		System.out.println("Done");
+		}
 
 		// Display the result as JSON in console (also available in the file at "Path")
 		//System.out.println(app.logBook());

@@ -156,6 +156,8 @@ public class OurBBook implements BBook {
 	private MyCurrency gbp = new MyCurrency(false, Currency.GBP, new BigDecimal(1.27), new BigDecimal(0), 
 			new BigDecimal(0.0005));
 	
+	private boolean identified = false;
+	
 	Currency currList[] = {Currency.USD, Currency.EUR, Currency.CHF, Currency.JPY, Currency.GBP};
 	private Map<Currency, Map<Currency, List<BigDecimal>>> mapimap = new HashMap<>();
 	
@@ -232,7 +234,7 @@ public class OurBBook implements BBook {
 		
 		mapimap.get(trade.base).get(trade.term).add(trade.quantity);
 		
-		BigDecimal threshold = new BigDecimal(1000000);
+		BigDecimal threshold = new BigDecimal(2000000);
 		
 		mapos.get(trade.term).receiveFromClient(trade.quantity, mapos.get(trade.base));
 		switch(trade.base) {
@@ -363,7 +365,9 @@ public class OurBBook implements BBook {
 			default:
 			}
 		}
-		if(mapimap.size() > 0 && mapimap.get(Currency.USD).get(Currency.CHF).size() > 100) {
+		if(mapimap.size() > 0 && mapimap.get(Currency.USD).get(Currency.CHF).size() > 500 &&
+				!identified) {
+			identified = true;
 			List<BigDecimal> usd_chf = mapimap.get(Currency.USD).get(Currency.CHF);
 			List<BigDecimal> chf_usd = mapimap.get(Currency.CHF).get(Currency.USD);
 			List<BigDecimal> eur_chf = mapimap.get(Currency.EUR).get(Currency.CHF);
