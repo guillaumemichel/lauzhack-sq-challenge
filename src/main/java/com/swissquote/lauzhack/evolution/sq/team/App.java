@@ -27,7 +27,7 @@ public class App {
 		
 		// Create the application runner
 		SwissquoteEvolution app = new SwissquoteEvolutionBuilder().
-				profile(MarketProfile.SOMETHING).
+				profile(MarketProfile.POC).
 				seed(1).
 				team("steaks").
 				bBook(ourBBook).

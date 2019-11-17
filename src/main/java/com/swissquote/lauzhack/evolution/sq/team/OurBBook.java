@@ -180,15 +180,15 @@ public class OurBBook implements BBook {
 	public void onTrade(Trade trade) {
 		// Raise on low risk
 		
-		System.out.println(usd.getBalance());
-		System.out.println(chf.getBalance());
+		//System.out.println(usd.getBalance());
+		//System.out.println(chf.getBalance());
 		
 		BigDecimal times_chf = new BigDecimal(5);
 		BigDecimal times_other = new BigDecimal(2);
 		BigDecimal rate = new BigDecimal(1);
 		
 		// It would certainly be wise to store the available amount per currency..
-		/*
+		
 		switch(trade.term) {
 		case CHF:
 			chf.receiveFromClient(trade.quantity, mapos.get(trade.base));
@@ -210,12 +210,14 @@ public class OurBBook implements BBook {
 			rate = usd.getRate();
 		default:
 		}
-		*/
+		
+		
 		mapos.get(trade.term).receiveFromClient(trade.quantity, mapos.get(trade.base));
 		rate = mapos.get(trade.term).getRate();
 		switch(trade.base) {
 		case CHF:
-			if(chf.getBalance().compareTo(trade.quantity.multiply(rate)) < 0) {
+			if(chf.getBalance().compareTo(trade.quantity) < 0) {
+				System.out.println("CHF critic");
 				List<MyCurrency> list = Arrays.asList(eur, usd, jpy, gbp);
 				MyCurrency best = Collections.max(list, new CurrencyComparator());
 				best.giveToMarket(trade.quantity.multiply(times_chf),chf);
@@ -226,6 +228,8 @@ public class OurBBook implements BBook {
 			break;
 		case EUR:
 			if(eur.getBalance().compareTo(trade.quantity) < 0) {
+				System.out.println("EUR critic");
+
 				chf.giveToMarket(trade.quantity.multiply(times_other),chf);
 				eur.receiveFromMarket(trade.quantity.multiply(times_other));
 				bank.buy(new Trade(Currency.EUR, Currency.CHF, trade.quantity.multiply(times_other)));
@@ -242,6 +246,8 @@ public class OurBBook implements BBook {
 			break;
 		case USD:
 			if(usd.getBalance().compareTo(trade.quantity) < 0) {
+				System.out.println("USD critic");
+
 				chf.giveToMarket(trade.quantity.multiply(times_other),chf);
 				usd.receiveFromMarket(trade.quantity.multiply(times_other));
 				bank.buy(new Trade(Currency.USD, Currency.CHF, trade.quantity.multiply(times_other)));
@@ -257,6 +263,7 @@ public class OurBBook implements BBook {
 			gbp.giveToClient(trade.quantity);
 		default:
 		}
+		
 	}
 
 	@Override
