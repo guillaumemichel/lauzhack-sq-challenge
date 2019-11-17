@@ -1,5 +1,8 @@
 package com.swissquote.lauzhack.evolution.sq.team;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.util.*;
@@ -38,6 +41,7 @@ class MyCurrency{
 		this.currency = currency;
 		this.rate = rate;
 		this.rates = new ArrayList<>();
+		rates.add(rate);
 		this.balance = balance;
 		this.markup = markup;
 		this.last2Trades = new ArrayDeque<>();
@@ -118,17 +122,32 @@ class MyCurrency{
 		rates.add(newRate);
 	}
 	
+	public int nbRates() {
+		return rates.size();
+	}
+	
 	public BigDecimal movingAverage() {
 		BigDecimal sum = BigDecimal.ZERO;
 		for(BigDecimal bd : rates) {
 			sum = sum.add(bd);
 		}
-		return sum;
+		return sum.divide(new BigDecimal(rates.size()), MathContext.DECIMAL128);
+	}
+	
+	
+	public BigDecimal movingStd() {
+		BigDecimal avg = movingAverage();
+		BigDecimal var = BigDecimal.ZERO;
+		for(BigDecimal rate : rates) {
+			BigDecimal diff = rate.subtract(avg);
+			var = var.add(diff.multiply(diff));
+		}
+		return var.divide(new BigDecimal(rates.size()), MathContext.DECIMAL128)
+				.sqrt(MathContext.DECIMAL128);
 	}
 	
 	public BigDecimal risk() {
-		//return (rate.subtract(movingAvg)).divide(movingAvg);
-		return BigDecimal.ONE;
+		return (rate.subtract(movingAverage())).divide(movingAverage());
 	}
 }
 
@@ -140,29 +159,55 @@ public class OurBBook implements BBook {
 
 	// Save a reference to the bank in order to pass orders
 	private Bank bank;
-	private MyCurrency usd;
-	private MyCurrency eur;
-	private MyCurrency chf;
-	private MyCurrency jpy;
-	private MyCurrency gbp;
 	
+	private MyCurrency usd = new MyCurrency(false, Currency.USD, new BigDecimal(0.99), new BigDecimal(0), 
+			new BigDecimal(0.001));
+	private MyCurrency eur = new MyCurrency(false, Currency.EUR, new BigDecimal(1.09), new BigDecimal(0), 
+			new BigDecimal(0.001));
+	private MyCurrency chf = new MyCurrency(true, Currency.CHF, new BigDecimal(1), new BigDecimal(20000000), 
+			new BigDecimal(0.000));
+	private MyCurrency jpy = new MyCurrency(false, Currency.JPY, new BigDecimal(0.0091), new BigDecimal(0), 
+			new BigDecimal(0.003));
+	private MyCurrency gbp = new MyCurrency(false, Currency.GBP, new BigDecimal(1.27), new BigDecimal(0), 
+			new BigDecimal(0.0005));
+  private MarketProfile profile = null;
 	
-
+	Currency currList[] = {Currency.USD, Currency.EUR, Currency.CHF, Currency.JPY, Currency.GBP};
+	private Map<Currency, Map<Currency, List<BigDecimal>>> mapimap = new HashMap<>();
+	
 	Map<Currency,MyCurrency> mapos = new HashMap<Currency,MyCurrency>();
 
+	public BigDecimal movingAverage(List<BigDecimal> rates) {
+		BigDecimal sum = BigDecimal.ZERO;
+		for(BigDecimal bd : rates) {
+			sum = sum.add(bd);
+		}
+		return sum.divide(new BigDecimal(rates.size()), MathContext.DECIMAL128);
+	}
+	
+	public BigDecimal movingStd(List<BigDecimal> rates) {
+		BigDecimal avg = movingAverage(rates);
+		BigDecimal var = BigDecimal.ZERO;
+		for(BigDecimal rate : rates) {
+			BigDecimal diff = rate.subtract(avg);
+			var = var.add(diff.multiply(diff));
+		}
+		return var.divide(new BigDecimal(rates.size()), MathContext.DECIMAL128)
+				.sqrt(MathContext.DECIMAL128);
+	}
+	
 	@Override
 	public void onInit() {
-		usd = new MyCurrency(false, Currency.USD, new BigDecimal(0.99), new BigDecimal(0), 
-				new BigDecimal(0.001));
-		eur = new MyCurrency(false, Currency.EUR, new BigDecimal(1.09), new BigDecimal(0), 
-				new BigDecimal(0.001));
-		chf = new MyCurrency(true, Currency.CHF, new BigDecimal(1), new BigDecimal(20000000), 
-				new BigDecimal(0.000));
-		jpy = new MyCurrency(false, Currency.JPY, new BigDecimal(0.0091), new BigDecimal(0), 
-				new BigDecimal(0.003));
-		gbp = new MyCurrency(false, Currency.GBP, new BigDecimal(1.27), new BigDecimal(0), 
-				new BigDecimal(0.0005));
-
+		for(Currency curr : currList) {
+			Map<Currency, List<BigDecimal>> map = new HashMap<>();
+			for(Currency curr2 : currList) {
+				if(curr2 != curr) {
+					map.put(curr2, new ArrayList<>());
+				}
+			}
+			mapimap.put(curr, map);
+		}
+		
 		mapos.put(Currency.USD, usd);
 		mapos.put(Currency.EUR, eur);
 		mapos.put(Currency.CHF, chf);
@@ -200,40 +245,17 @@ public class OurBBook implements BBook {
 
 	@Override
 	public void onTrade(Trade trade) {
-		// Raise on low risk
 		
-		//System.out.println(usd.getBalance());
-		//System.out.println(chf.getBalance());
+		mapimap.get(trade.base).get(trade.term).add(trade.quantity);
 		
-		//BigDecimal times_chf = new BigDecimal(5);
-		//BigDecimal times_other = new BigDecimal(2);
 		BigDecimal threshold = new BigDecimal(1000000);
-		/*
-		switch(trade.term) {
-		case CHF:
-			chf.receiveFromClient(trade.quantity, mapos.get(trade.base));
-			break;
-		case EUR:
-			eur.receiveFromClient(trade.quantity, mapos.get(trade.base));
-			break;
-		case GBP:
-			gbp.receiveFromClient(trade.quantity, mapos.get(trade.base));
-			break;
-		case JPY:
-			jpy.receiveFromClient(trade.quantity, mapos.get(trade.base));
-			break;
-		case USD:
-			usd.receiveFromClient(trade.quantity, mapos.get(trade.base));
-		default:
-		}*/
-		
 		
 		mapos.get(trade.term).receiveFromClient(trade.quantity, mapos.get(trade.base));
 		switch(trade.base) {
 		case CHF:
 			chf.giveToClient(trade.quantity);
 			if(chf.getBalance().compareTo(threshold) <= 0) {
-				System.out.println("CHF critic "+chf.getBalance()+", "+trade.quantity);
+				//System.out.println("CHF critic "+chf.getBalance()+", "+trade.quantity);
 				List<MyCurrency> list = Arrays.asList(eur, usd, jpy, gbp);
 				MyCurrency best = Collections.max(list, new CurrencyComparator());
 				best.giveToMarket(threshold,chf);
@@ -247,13 +269,13 @@ public class OurBBook implements BBook {
 		case EUR:
 			eur.giveToClient(trade.quantity);
 			if(eur.getBalance().compareTo(threshold) <= 0) {
-				System.out.println("EUR critic");
+				//System.out.println("EUR critic");
 
 				chf.giveToMarket(threshold,eur);
 				eur.receiveFromMarket(threshold);
 				bank.buy(new Trade(Currency.EUR, Currency.CHF, threshold));
 				if(chf.getBalance().compareTo(threshold) <= 0) {
-					System.out.println("CHF critic "+chf.getBalance()+", "+trade.quantity);
+					//System.out.println("CHF critic "+chf.getBalance()+", "+trade.quantity);
 					List<MyCurrency> list = Arrays.asList(eur, usd, jpy, gbp);
 					MyCurrency best = Collections.max(list, new CurrencyComparator());
 					best.giveToMarket(threshold,chf);
@@ -269,12 +291,12 @@ public class OurBBook implements BBook {
 		case JPY:
 			jpy.giveToClient(trade.quantity);
 			if(jpy.getBalance().compareTo(threshold) <= 0) {
-				System.out.println("JPY critic");
+				//System.out.println("JPY critic");
 				chf.giveToMarket(threshold,jpy);
 				jpy.receiveFromMarket(threshold);
 				bank.buy(new Trade(Currency.JPY, Currency.CHF, threshold));
 				if(chf.getBalance().compareTo(threshold) <= 0) {
-					System.out.println("CHF critic "+chf.getBalance()+", "+trade.quantity);
+					//System.out.println("CHF critic "+chf.getBalance()+", "+trade.quantity);
 					List<MyCurrency> list = Arrays.asList(eur, usd, jpy, gbp);
 					MyCurrency best = Collections.max(list, new CurrencyComparator());
 					best.giveToMarket(threshold,chf);
@@ -290,13 +312,13 @@ public class OurBBook implements BBook {
 		case USD:
 			usd.giveToClient(trade.quantity);
 			if(usd.getBalance().compareTo(threshold) <= 0) {
-				System.out.println("USD critic");
+				//System.out.println("USD critic");
 
 				chf.giveToMarket(threshold,usd);
 				usd.receiveFromMarket(threshold);
 				bank.buy(new Trade(Currency.USD, Currency.CHF, threshold));
 				if(chf.getBalance().compareTo(threshold) <= 0) {
-					System.out.println("CHF critic "+chf.getBalance()+", "+trade.quantity);
+					//System.out.println("CHF critic "+chf.getBalance()+", "+trade.quantity);
 					List<MyCurrency> list = Arrays.asList(eur, usd, jpy, gbp);
 					MyCurrency best = Collections.max(list, new CurrencyComparator());
 					best.giveToMarket(threshold,chf);
@@ -311,14 +333,14 @@ public class OurBBook implements BBook {
 			break;
 		case GBP:
 			gbp.giveToClient(trade.quantity);
-			//System.out.println(gbp.getBalance());
+			////System.out.println(gbp.getBalance());
 			if(gbp.getBalance().compareTo(threshold) <= 0) {
-				System.out.println("GBP critic "+gbp.getBalance()+", "+trade.quantity);
+				//System.out.println("GBP critic "+gbp.getBalance()+", "+trade.quantity);
 				chf.giveToMarket(threshold,gbp);
 				gbp.receiveFromMarket(threshold);
 				bank.buy(new Trade(Currency.GBP, Currency.CHF, threshold));
 				if(chf.getBalance().compareTo(threshold) <= 0) {
-					System.out.println("CHF critic "+chf.getBalance()+", "+trade.quantity);
+					//System.out.println("CHF critic "+chf.getBalance()+", "+trade.quantity);
 					List<MyCurrency> list = Arrays.asList(eur, usd, jpy, gbp);
 					MyCurrency best = Collections.max(list, new CurrencyComparator());
 					best.giveToMarket(threshold,chf);
@@ -326,13 +348,15 @@ public class OurBBook implements BBook {
 					bank.buy(new Trade(Currency.CHF, best.getCurrency(), threshold
 							));
 				}
-				System.out.println(gbp.getBalance());
+				//System.out.println(gbp.getBalance());
 			}
 			gbp.giveToClient(trade.quantity);
 			gbp.addToQueue(trade);
 		default:
 		}
-		
+    if(profile != null){
+      decide(profile);
+    }
 	}
 
 	@Override
@@ -370,7 +394,54 @@ public class OurBBook implements BBook {
 			}
 		}
 
-		//decide(MarketProfile.SOMETHING);
+    
+		if(mapimap.size() > 0 && mapimap.get(Currency.USD).get(Currency.CHF).size() > 100) {
+			List<BigDecimal> usd_chf = mapimap.get(Currency.USD).get(Currency.CHF);
+			List<BigDecimal> chf_usd = mapimap.get(Currency.CHF).get(Currency.USD);
+			List<BigDecimal> eur_chf = mapimap.get(Currency.EUR).get(Currency.CHF);
+			List<BigDecimal> chf_eur = mapimap.get(Currency.CHF).get(Currency.EUR);
+			List<BigDecimal> gbp_chf = mapimap.get(Currency.GBP).get(Currency.CHF);
+			List<BigDecimal> chf_gbp = mapimap.get(Currency.CHF).get(Currency.GBP);
+			List<BigDecimal> jpy_chf = mapimap.get(Currency.JPY).get(Currency.CHF);
+			List<BigDecimal> chf_jpy = mapimap.get(Currency.CHF).get(Currency.JPY);
+			BigDecimal std_usd_chf = movingStd(usd_chf); 
+			BigDecimal std_chf_usd = movingStd(chf_usd);
+			BigDecimal std_eur_chf = movingStd(eur_chf); 
+			BigDecimal std_chf_eur = movingStd(chf_eur); 
+			BigDecimal std_gbp_chf = movingStd(gbp_chf);
+			BigDecimal std_chf_gbp = movingStd(chf_gbp); 
+			BigDecimal std_jpy_chf = movingStd(jpy_chf);
+			BigDecimal std_chf_jpy = movingStd(chf_jpy);
+			try {
+				Process p = Runtime.getRuntime().exec("python3 "
+						+ "random_forest_evaluation.py "+ std_eur_chf +","+ std_chf_eur +","+ std_usd_chf
+						+","+ std_chf_usd +","+ std_jpy_chf +","+ std_chf_jpy +","+ std_gbp_chf +","+ std_chf_gbp);
+				BufferedReader stdInput = new BufferedReader(new 
+		                 InputStreamReader(p.getInputStream()));
+				BufferedReader stdError = new BufferedReader(new 
+		                 InputStreamReader(p.getErrorStream()));
+				String prediction = stdInput.readLine();
+				String s = null;
+				while((s = stdError.readLine()) != null) {
+          if(s == "0"){
+            profile = MarketProfile.SOMETHING;
+          }else if(s == "1"){
+            profile = MarketProfile.POC;
+          }else if(s == "2"){
+            profile = MarketProfile.IT_WORKS;
+          }else if(s == "3"){
+            profile = MarketProfile.STARTUP;
+          }else{
+            profile = MarketProfile.UNICORN;
+          }
+        }
+				System.out.println(prediction);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+      }
+
+		
 	}
 
 	private void decide(MarketProfile profile) {
@@ -408,7 +479,6 @@ public class OurBBook implements BBook {
 				case STARTUP:
 					break;
 				default:
-
 			}
 		}
 	}
