@@ -2,6 +2,7 @@ package com.swissquote.lauzhack.evolution.sq.team;
 
 import java.math.BigDecimal;
 import java.math.MathContext;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
@@ -27,9 +28,8 @@ class CurrencyComparator implements Comparator<MyCurrency>{
 class MyCurrency{
 	private boolean isCHF;
 	private Currency currency;
-	private BigDecimal movingAvg;
-	private BigDecimal nbSamples;
 	private BigDecimal rate;
+	private List<BigDecimal> rates;
 	private BigDecimal balance;
 	private BigDecimal markup;
 	
@@ -38,8 +38,9 @@ class MyCurrency{
 		this.isCHF = isCHF;
 		this.currency = currency;
 		this.rate = rate;
+		this.rates = new ArrayList<>();
 		this.movingAvg = rate;
-		this.nbSamples = BigDecimal.ONE;
+		this.movingStd  = BigDecimal.ZERO;
 		this.balance = balance;
 		this.markup = markup;
 	}
@@ -101,13 +102,20 @@ class MyCurrency{
 	
 	public void rateChange(BigDecimal newRate) {
 		rate = newRate;
-		movingAvg = (movingAvg.multiply(nbSamples).add(newRate)).divide(nbSamples.add(BigDecimal.ONE), 
-				MathContext.DECIMAL128);
-		nbSamples = nbSamples.add(BigDecimal.ONE);
+		rates.add(newRate);
+	}
+	
+	public BigDecimal movingAverage() {
+		BigDecimal sum = BigDecimal.ZERO;
+		for(BigDecimal bd : rates) {
+			sum = sum.add(bd);
+		}
+		return sum;
 	}
 	
 	public BigDecimal risk() {
-		return (rate.subtract(movingAvg)).divide(movingAvg);
+		//return (rate.subtract(movingAvg)).divide(movingAvg);
+		return BigDecimal.ONE;
 	}
 }
 
@@ -148,10 +156,10 @@ public class OurBBook implements BBook {
 		mapos.put(Currency.JPY, jpy);
 		mapos.put(Currency.GBP, gbp);
 		
-		BigDecimal eurChange = new BigDecimal(3500000);
+		BigDecimal eurChange = new BigDecimal(4000000);
 		BigDecimal usdChange = new BigDecimal(4000000);
 		BigDecimal jpyChange = new BigDecimal(100000000);
-		BigDecimal gbpChange = new BigDecimal(1700000);
+		BigDecimal gbpChange = new BigDecimal(2000000);
 		
 		
 		usd.receiveFromMarket(usdChange);
@@ -186,7 +194,7 @@ public class OurBBook implements BBook {
 		
 		//BigDecimal times_chf = new BigDecimal(5);
 		//BigDecimal times_other = new BigDecimal(2);
-		BigDecimal threshold = new BigDecimal(100000);
+		BigDecimal threshold = new BigDecimal(1000000);
 		/*
 		switch(trade.term) {
 		case CHF:
