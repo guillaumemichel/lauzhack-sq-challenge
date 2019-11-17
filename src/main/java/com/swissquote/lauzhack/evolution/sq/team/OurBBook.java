@@ -45,7 +45,7 @@ class MyCurrency{
 	}
 	
 	public BigDecimal getBalance() { // CHF
-		return balance.divide(rate, MathContext.DECIMAL128);
+		return balance.multiply(rate);
 	}
 	
 	public Currency getCurrency() {
@@ -184,9 +184,9 @@ public class OurBBook implements BBook {
 		//System.out.println(usd.getBalance());
 		//System.out.println(chf.getBalance());
 		
-		BigDecimal times_chf = new BigDecimal(5);
-		BigDecimal times_other = new BigDecimal(2);
-		BigDecimal threshold = new BigDecimal(10000);
+		//BigDecimal times_chf = new BigDecimal(5);
+		//BigDecimal times_other = new BigDecimal(2);
+		BigDecimal threshold = new BigDecimal(100000);
 		/*
 		switch(trade.term) {
 		case CHF:
@@ -215,9 +215,9 @@ public class OurBBook implements BBook {
 				System.out.println("CHF critic "+chf.getBalance()+", "+trade.quantity);
 				List<MyCurrency> list = Arrays.asList(eur, usd, jpy, gbp);
 				MyCurrency best = Collections.max(list, new CurrencyComparator());
-				best.giveToMarket(trade.quantity.multiply(times_chf),chf);
-				chf.receiveFromMarket(trade.quantity.multiply(times_chf));
-				bank.buy(new Trade(Currency.CHF, best.getCurrency(), trade.quantity.multiply(times_chf)
+				best.giveToMarket(threshold,chf);
+				chf.receiveFromMarket(threshold);
+				bank.buy(new Trade(Currency.CHF, best.getCurrency(), threshold
 						));
 			}
 			break;
@@ -226,16 +226,16 @@ public class OurBBook implements BBook {
 			if(eur.getBalance().compareTo(threshold) <= 0) {
 				System.out.println("EUR critic");
 
-				chf.giveToMarket(trade.quantity.multiply(times_other),eur);
-				eur.receiveFromMarket(trade.quantity.multiply(times_other));
-				bank.buy(new Trade(Currency.EUR, Currency.CHF, trade.quantity.multiply(times_other)));
+				chf.giveToMarket(threshold,eur);
+				eur.receiveFromMarket(threshold);
+				bank.buy(new Trade(Currency.EUR, Currency.CHF, threshold));
 				if(chf.getBalance().compareTo(threshold) <= 0) {
 					System.out.println("CHF critic "+chf.getBalance()+", "+trade.quantity);
 					List<MyCurrency> list = Arrays.asList(eur, usd, jpy, gbp);
 					MyCurrency best = Collections.max(list, new CurrencyComparator());
-					best.giveToMarket(trade.quantity.multiply(times_chf),chf);
-					chf.receiveFromMarket(trade.quantity.multiply(times_chf));
-					bank.buy(new Trade(Currency.CHF, best.getCurrency(), trade.quantity.multiply(times_chf)
+					best.giveToMarket(threshold,chf);
+					chf.receiveFromMarket(threshold);
+					bank.buy(new Trade(Currency.CHF, best.getCurrency(), threshold
 							));
 				}
 			}
@@ -244,16 +244,16 @@ public class OurBBook implements BBook {
 			jpy.giveToClient(trade.quantity);
 			if(jpy.getBalance().compareTo(threshold) <= 0) {
 				System.out.println("JPY critic");
-				chf.giveToMarket(trade.quantity.multiply(times_other),jpy);
-				jpy.receiveFromMarket(trade.quantity.multiply(times_other));
-				bank.buy(new Trade(Currency.JPY, Currency.CHF, trade.quantity.multiply(times_other)));
+				chf.giveToMarket(threshold,jpy);
+				jpy.receiveFromMarket(threshold);
+				bank.buy(new Trade(Currency.JPY, Currency.CHF, threshold));
 				if(chf.getBalance().compareTo(threshold) <= 0) {
 					System.out.println("CHF critic "+chf.getBalance()+", "+trade.quantity);
 					List<MyCurrency> list = Arrays.asList(eur, usd, jpy, gbp);
 					MyCurrency best = Collections.max(list, new CurrencyComparator());
-					best.giveToMarket(trade.quantity.multiply(times_chf),chf);
-					chf.receiveFromMarket(trade.quantity.multiply(times_chf));
-					bank.buy(new Trade(Currency.CHF, best.getCurrency(), trade.quantity.multiply(times_chf)
+					best.giveToMarket(threshold,chf);
+					chf.receiveFromMarket(threshold);
+					bank.buy(new Trade(Currency.CHF, best.getCurrency(), threshold
 							));
 				}
 			}
@@ -263,16 +263,16 @@ public class OurBBook implements BBook {
 			if(usd.getBalance().compareTo(threshold) <= 0) {
 				System.out.println("USD critic");
 
-				chf.giveToMarket(trade.quantity.multiply(times_other),usd);
-				usd.receiveFromMarket(trade.quantity.multiply(times_other));
-				bank.buy(new Trade(Currency.USD, Currency.CHF, trade.quantity.multiply(times_other)));
+				chf.giveToMarket(threshold,usd);
+				usd.receiveFromMarket(threshold);
+				bank.buy(new Trade(Currency.USD, Currency.CHF, threshold));
 				if(chf.getBalance().compareTo(threshold) <= 0) {
 					System.out.println("CHF critic "+chf.getBalance()+", "+trade.quantity);
 					List<MyCurrency> list = Arrays.asList(eur, usd, jpy, gbp);
 					MyCurrency best = Collections.max(list, new CurrencyComparator());
-					best.giveToMarket(trade.quantity.multiply(times_chf),chf);
-					chf.receiveFromMarket(trade.quantity.multiply(times_chf));
-					bank.buy(new Trade(Currency.CHF, best.getCurrency(), trade.quantity.multiply(times_chf)
+					best.giveToMarket(threshold,chf);
+					chf.receiveFromMarket(threshold);
+					bank.buy(new Trade(Currency.CHF, best.getCurrency(), threshold
 							));
 				}
 			}
@@ -282,16 +282,16 @@ public class OurBBook implements BBook {
 			//System.out.println(gbp.getBalance());
 			if(gbp.getBalance().compareTo(threshold) <= 0) {
 				System.out.println("GBP critic "+gbp.getBalance()+", "+trade.quantity);
-				chf.giveToMarket(trade.quantity.multiply(times_other),gbp);
-				gbp.receiveFromMarket(trade.quantity.multiply(times_other));
-				bank.buy(new Trade(Currency.GBP, Currency.CHF, trade.quantity.multiply(times_other)));
+				chf.giveToMarket(threshold,gbp);
+				gbp.receiveFromMarket(threshold);
+				bank.buy(new Trade(Currency.GBP, Currency.CHF, threshold));
 				if(chf.getBalance().compareTo(threshold) <= 0) {
 					System.out.println("CHF critic "+chf.getBalance()+", "+trade.quantity);
 					List<MyCurrency> list = Arrays.asList(eur, usd, jpy, gbp);
 					MyCurrency best = Collections.max(list, new CurrencyComparator());
-					best.giveToMarket(trade.quantity.multiply(times_chf),chf);
-					chf.receiveFromMarket(trade.quantity.multiply(times_chf));
-					bank.buy(new Trade(Currency.CHF, best.getCurrency(), trade.quantity.multiply(times_chf)
+					best.giveToMarket(threshold,chf);
+					chf.receiveFromMarket(threshold);
+					bank.buy(new Trade(Currency.CHF, best.getCurrency(), threshold
 							));
 				}
 				System.out.println(gbp.getBalance());
