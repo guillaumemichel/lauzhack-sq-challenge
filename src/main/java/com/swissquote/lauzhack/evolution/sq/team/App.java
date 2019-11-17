@@ -14,25 +14,34 @@ public class App {
 	 */
 	public static void main(String[] args) {
 		// Instantiate our BBook
-		HedgeBBook bBook = new HedgeBBook();
+		OurBBook ourBBook = new OurBBook();
+		//ourBBook.onInit();
 
+		/*
+		MarketProfile[] profiles = {MarketProfile.SOMETHING, MarketProfile.POC, MarketProfile.IT_WORKS,
+		                            MarketProfile.STARTUP, MarketProfile.UNICORN};
+		//int[] seeds = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+		//int[] seeds = {11, 12, 13, 14, 15, 16, 17, 18, 19, 20};
+		//int[] seeds = {21};
+		*/
+		
 		// Create the application runner
 		SwissquoteEvolution app = new SwissquoteEvolutionBuilder().
 				profile(MarketProfile.SOMETHING).
 				seed(1).
-				team("H(steaks)").
-				bBook(bBook).
-				filePath("/Users/xavierpantet/Desktop/lauzhack-sq-challenge/").
+				team("steaks").
+				bBook(ourBBook).
+				filePath("/mnt/guillaume/Documents/docs/lauzhack/lauzhack-sq-challenge/newstrat/").
 				interval(1).
 				steps(5000).
 				build();
 
 		// Let's go !
 		app.run();
-		bBook.stop();
+		app.logBook();
 
 		// Display the result as JSON in console (also available in the file at "Path")
-		System.out.println(app.logBook());
+		//System.out.println(app.logBook());
 	}
 
 }
