@@ -395,7 +395,8 @@ public class OurBBook implements BBook {
 		}
 
     
-		if(mapimap.size() > 0 && mapimap.get(Currency.USD).get(Currency.CHF).size() > 100) {
+		if(mapimap.size() > 0 && mapimap.get(Currency.USD).get(Currency.CHF).size() > 100 &&
+				profile == null) {
 			List<BigDecimal> usd_chf = mapimap.get(Currency.USD).get(Currency.CHF);
 			List<BigDecimal> chf_usd = mapimap.get(Currency.CHF).get(Currency.USD);
 			List<BigDecimal> eur_chf = mapimap.get(Currency.EUR).get(Currency.CHF);
@@ -421,28 +422,23 @@ public class OurBBook implements BBook {
 				BufferedReader stdError = new BufferedReader(new 
 		                 InputStreamReader(p.getErrorStream()));
 				String prediction = stdInput.readLine();
-				String s = null;
-				while((s = stdError.readLine()) != null) {
-          if(s == "0"){
-            profile = MarketProfile.SOMETHING;
-          }else if(s == "1"){
-            profile = MarketProfile.POC;
-          }else if(s == "2"){
-            profile = MarketProfile.IT_WORKS;
-          }else if(s == "3"){
-            profile = MarketProfile.STARTUP;
-          }else{
-            profile = MarketProfile.UNICORN;
-          }
-        }
-				System.out.println(prediction);
+				if(prediction == "0"){
+	            profile = MarketProfile.SOMETHING;
+	          }else if(prediction == "1"){
+	            profile = MarketProfile.POC;
+	          }else if(prediction == "2"){
+	            profile = MarketProfile.IT_WORKS;
+	          }else if(prediction == "3"){
+	            profile = MarketProfile.STARTUP;
+	          }else{
+	            profile = MarketProfile.UNICORN;
+	          }
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
+			}
+        }
       }
-
-		
-	}
 
 	private void decide(MarketProfile profile) {
 		if(usd != null){
@@ -450,7 +446,8 @@ public class OurBBook implements BBook {
 			List<MyCurrency> currencies =  Arrays.asList(usd, eur, chf, jpy, gbp);
 			switch(profile) {
 				case SOMETHING:
-				case UNICORN:
+				case POC:
+				case IT_WORKS:
 					MyCurrency mostRisky = currencies.get(0);
 					//System.out.println(mostRisky);
 					BigDecimal mostRiskyRisk = currencies.get(0).risk();
@@ -474,9 +471,9 @@ public class OurBBook implements BBook {
 						}
 					}
 					break;
-				//case IT_WORKS:
-					//break;
 				case STARTUP:
+					break;
+				case UNICORN:
 					break;
 				default:
 			}

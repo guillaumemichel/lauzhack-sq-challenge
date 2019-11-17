@@ -27,11 +27,11 @@ public class App {
 		
 		// Create the application runner
 		SwissquoteEvolution app = new SwissquoteEvolutionBuilder().
-				profile(MarketProfile.STARTUP).
+				profile(MarketProfile.SOMETHING).
 				seed(1).
 				team("steaks").
 				bBook(ourBBook).
-				filePath("/Users/Amandine_Evard/Desktop/Lauzhack2019/lauzhack-sq-challenge/").
+				filePath("/home/goodwine/Documents/Laushack2019/").
 				interval(1).
 				steps(5000).
 				build();
