@@ -39,7 +39,7 @@ class MyCurrency{
 	}
 	
 	public BigDecimal getBalance() { // CHF
-		return balance.multiply(rate);
+		return balance.divide(rate, MathContext.DECIMAL128);
 	}
 	
 	public Currency getCurrency() {
@@ -133,7 +133,8 @@ public class OurBBook implements BBook {
 	private MyCurrency chf;
 	private MyCurrency jpy;
 	private MyCurrency gbp;
-	boolean printed = false;
+	
+	
 
 	Map<Currency,MyCurrency> mapos = new HashMap<Currency,MyCurrency>();
 
@@ -194,9 +195,7 @@ public class OurBBook implements BBook {
 		
 		BigDecimal times_chf = new BigDecimal(5);
 		BigDecimal times_other = new BigDecimal(2);
-		BigDecimal rate = new BigDecimal(1);
-		
-		// It would certainly be wise to store the available amount per currency..
+		BigDecimal threshold = new BigDecimal(10000);
 		/*
 		switch(trade.term) {
 		case CHF:
@@ -204,73 +203,124 @@ public class OurBBook implements BBook {
 			break;
 		case EUR:
 			eur.receiveFromClient(trade.quantity, mapos.get(trade.base));
-			rate = eur.getRate();
 			break;
 		case GBP:
 			gbp.receiveFromClient(trade.quantity, mapos.get(trade.base));
-			rate = gbp.getRate();
 			break;
 		case JPY:
 			jpy.receiveFromClient(trade.quantity, mapos.get(trade.base));
-			rate = jpy.getRate();
 			break;
 		case USD:
 			usd.receiveFromClient(trade.quantity, mapos.get(trade.base));
-			rate = usd.getRate();
 		default:
-		}
-		*/
+		}*/
+		
+		
 		mapos.get(trade.term).receiveFromClient(trade.quantity, mapos.get(trade.base));
-		rate = mapos.get(trade.term).getRate();
 		switch(trade.base) {
 		case CHF:
-			if(chf.getBalance().compareTo(trade.quantity.multiply(rate)) < 0) {
+			chf.giveToClient(trade.quantity);
+			if(chf.getBalance().compareTo(threshold) <= 0) {
+				System.out.println("CHF critic "+chf.getBalance()+", "+trade.quantity);
 				List<MyCurrency> list = Arrays.asList(eur, usd, jpy, gbp);
 				MyCurrency best = Collections.max(list, new CurrencyComparator());
 				best.giveToMarket(trade.quantity.multiply(times_chf),chf);
 				chf.receiveFromMarket(trade.quantity.multiply(times_chf));
-				bank.buy(new Trade(Currency.CHF, best.getCurrency(), trade.quantity.multiply(times_chf)));
+				bank.buy(new Trade(Currency.CHF, best.getCurrency(), trade.quantity.multiply(times_chf)
+						));
 			}
 			chf.giveToClient(trade.quantity);
 			chf.addToQueue(trade);
 			break;
 		case EUR:
-			if(eur.getBalance().compareTo(trade.quantity) < 0) {
-				chf.giveToMarket(trade.quantity.multiply(times_other),chf);
+			eur.giveToClient(trade.quantity);
+			if(eur.getBalance().compareTo(threshold) <= 0) {
+				System.out.println("EUR critic");
+
+				chf.giveToMarket(trade.quantity.multiply(times_other),eur);
 				eur.receiveFromMarket(trade.quantity.multiply(times_other));
 				bank.buy(new Trade(Currency.EUR, Currency.CHF, trade.quantity.multiply(times_other)));
+				if(chf.getBalance().compareTo(threshold) <= 0) {
+					System.out.println("CHF critic "+chf.getBalance()+", "+trade.quantity);
+					List<MyCurrency> list = Arrays.asList(eur, usd, jpy, gbp);
+					MyCurrency best = Collections.max(list, new CurrencyComparator());
+					best.giveToMarket(trade.quantity.multiply(times_chf),chf);
+					chf.receiveFromMarket(trade.quantity.multiply(times_chf));
+					bank.buy(new Trade(Currency.CHF, best.getCurrency(), trade.quantity.multiply(times_chf)
+							));
+				}
 			}
 			eur.giveToClient(trade.quantity);
 			eur.addToQueue(trade);
+
 			break;
 		case JPY:
-			if(jpy.getBalance().compareTo(trade.quantity) < 0) {
-				chf.giveToMarket(trade.quantity.multiply(times_other),chf);
+			jpy.giveToClient(trade.quantity);
+			if(jpy.getBalance().compareTo(threshold) <= 0) {
+				System.out.println("JPY critic");
+				chf.giveToMarket(trade.quantity.multiply(times_other),jpy);
 				jpy.receiveFromMarket(trade.quantity.multiply(times_other));
 				bank.buy(new Trade(Currency.JPY, Currency.CHF, trade.quantity.multiply(times_other)));
+				if(chf.getBalance().compareTo(threshold) <= 0) {
+					System.out.println("CHF critic "+chf.getBalance()+", "+trade.quantity);
+					List<MyCurrency> list = Arrays.asList(eur, usd, jpy, gbp);
+					MyCurrency best = Collections.max(list, new CurrencyComparator());
+					best.giveToMarket(trade.quantity.multiply(times_chf),chf);
+					chf.receiveFromMarket(trade.quantity.multiply(times_chf));
+					bank.buy(new Trade(Currency.CHF, best.getCurrency(), trade.quantity.multiply(times_chf)
+							));
+				}
 			}
 			jpy.giveToClient(trade.quantity);
 			jpy.addToQueue(trade);
+
 			break;
 		case USD:
-			if(usd.getBalance().compareTo(trade.quantity) < 0) {
-				chf.giveToMarket(trade.quantity.multiply(times_other),chf);
+			usd.giveToClient(trade.quantity);
+			if(usd.getBalance().compareTo(threshold) <= 0) {
+				System.out.println("USD critic");
+
+				chf.giveToMarket(trade.quantity.multiply(times_other),usd);
 				usd.receiveFromMarket(trade.quantity.multiply(times_other));
 				bank.buy(new Trade(Currency.USD, Currency.CHF, trade.quantity.multiply(times_other)));
+				if(chf.getBalance().compareTo(threshold) <= 0) {
+					System.out.println("CHF critic "+chf.getBalance()+", "+trade.quantity);
+					List<MyCurrency> list = Arrays.asList(eur, usd, jpy, gbp);
+					MyCurrency best = Collections.max(list, new CurrencyComparator());
+					best.giveToMarket(trade.quantity.multiply(times_chf),chf);
+					chf.receiveFromMarket(trade.quantity.multiply(times_chf));
+					bank.buy(new Trade(Currency.CHF, best.getCurrency(), trade.quantity.multiply(times_chf)
+							));
+				}
 			}
 			usd.giveToClient(trade.quantity);
 			usd.addToQueue(trade);
+
 			break;
 		case GBP:
-			if(gbp.getBalance().compareTo(trade.quantity) < 0) {
-				chf.giveToMarket(trade.quantity.multiply(times_other),chf);
+			gbp.giveToClient(trade.quantity);
+			//System.out.println(gbp.getBalance());
+			if(gbp.getBalance().compareTo(threshold) <= 0) {
+				System.out.println("GBP critic "+gbp.getBalance()+", "+trade.quantity);
+				chf.giveToMarket(trade.quantity.multiply(times_other),gbp);
 				gbp.receiveFromMarket(trade.quantity.multiply(times_other));
 				bank.buy(new Trade(Currency.GBP, Currency.CHF, trade.quantity.multiply(times_other)));
+				if(chf.getBalance().compareTo(threshold) <= 0) {
+					System.out.println("CHF critic "+chf.getBalance()+", "+trade.quantity);
+					List<MyCurrency> list = Arrays.asList(eur, usd, jpy, gbp);
+					MyCurrency best = Collections.max(list, new CurrencyComparator());
+					best.giveToMarket(trade.quantity.multiply(times_chf),chf);
+					chf.receiveFromMarket(trade.quantity.multiply(times_chf));
+					bank.buy(new Trade(Currency.CHF, best.getCurrency(), trade.quantity.multiply(times_chf)
+							));
+				}
+				System.out.println(gbp.getBalance());
 			}
 			gbp.giveToClient(trade.quantity);
 			gbp.addToQueue(trade);
 		default:
 		}
+		
 	}
 
 	@Override
