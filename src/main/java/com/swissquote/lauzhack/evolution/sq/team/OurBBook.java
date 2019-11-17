@@ -32,6 +32,7 @@ class MyCurrency{
 	private BigDecimal rate;
 	private BigDecimal balance;
 	private BigDecimal markup;
+	private BigDecimal initial;
 	
 	public MyCurrency(boolean isCHF, Currency currency, BigDecimal rate, BigDecimal balance, 
 			BigDecimal markup) {
@@ -58,6 +59,14 @@ class MyCurrency{
 
 	public BigDecimal getMarkup(){
 		return markup;
+	}
+
+	public BigDecimal getInitial(){
+		return initial;
+	}
+
+	public void setInitial(BigDecimal ini){
+		this.initial=ini;
 	}
 	
 	public void giveToClient(BigDecimal amount) {
@@ -125,11 +134,13 @@ public class OurBBook implements BBook {
 	private MyCurrency jpy;
 	private MyCurrency gbp;
 	boolean printed = false;
+	int count;
 
 	Map<Currency,MyCurrency> mapos = new HashMap<Currency,MyCurrency>();
 
 	@Override
 	public void onInit() {
+		count=0;
 		usd = new MyCurrency(false, Currency.USD, new BigDecimal(0.99), new BigDecimal(0), 
 				new BigDecimal(0.001));
 		eur = new MyCurrency(false, Currency.EUR, new BigDecimal(1.09), new BigDecimal(0), 
@@ -152,7 +163,11 @@ public class OurBBook implements BBook {
 		BigDecimal jpyChange = new BigDecimal(100000000);
 		BigDecimal gbpChange = new BigDecimal(1700000);
 		
-		
+		usd.setInitial(usdChange);
+		eur.setInitial(eurChange);
+		jpy.setInitial(jpyChange);
+		gbp.setInitial(gbpChange);
+
 		usd.receiveFromMarket(usdChange);
 		eur.receiveFromMarket(eurChange);
 		jpy.receiveFromMarket(jpyChange);
@@ -161,6 +176,8 @@ public class OurBBook implements BBook {
 		chf.giveToMarket(jpyChange, jpy);
 		chf.giveToMarket(usdChange, usd);
 		chf.giveToMarket(eurChange, eur);
+
+		chf.setInitial(chf.getBalance());
 		
 		// Start by buying some cash. Don't search for more logic here: numbers are just random..
 		bank.buy(new Trade(Currency.EUR, Currency.CHF, eurChange));
@@ -174,6 +191,14 @@ public class OurBBook implements BBook {
 		System.out.println("GBP balance:"+gbp.getBalance().divide(gbp.getRate()));
 		System.out.println("CHF balance:"+chf.getBalance());
 
+		System.out.println("CHF initial:"+chf.getInitial());
+		System.out.println("USD initial:"+usd.getInitial());
+		System.out.println("EUR initial:"+eur.getInitial());
+		System.out.println("GBP initial:"+gbp.getInitial());
+		System.out.println("JPY initial:"+jpy.getInitial());
+
+
+
 	}
 
 	@Override
@@ -182,7 +207,42 @@ public class OurBBook implements BBook {
 		
 		//System.out.println(usd.getBalance());
 		//System.out.println(chf.getBalance());
+		count++;
+		mapos.get(trade.term).receiveFromClient(trade.quantity, mapos.get(trade.base));
+		mapos.get(trade.base).giveToClient(trade.quantity);
+
+		if (count==6310){
+			System.out.println("USD balance:"+usd.getBalance().divide(usd.getRate()));
+			System.out.println("EUR balance:"+eur.getBalance().divide(eur.getRate()));
+			System.out.println("JPY balance:"+jpy.getBalance().divide(jpy.getRate()));
+			System.out.println("GBP balance:"+gbp.getBalance().divide(gbp.getRate()));
+			System.out.println("CHF balance:"+chf.getBalance());	
+		}
 		
+		if(mapos.get(trade.base).getBalance().divide(mapos.get(trade.base).getRate()).compareTo(mapos.get(trade.base).getInitial().divide(new BigDecimal(10))) < 0) {
+			BigDecimal amount = mapos.get(trade.base).getInitial().divide(mapos.get(trade.base).getRate(),MathContext.DECIMAL128);
+			System.out.println("Amount before trade\n");
+			System.out.println("Count: "+count);
+			System.out.println("Balance: "+mapos.get(trade.base).getBalance());
+			System.out.println("To trade: "+amount);
+			System.out.println("Currency: "+mapos.get(trade.base).getCurrency().name());
+
+
+			bank.buy(new Trade(trade.base,Currency.CHF,amount));
+			mapos.get(trade.base).receiveFromMarket(amount.multiply(mapos.get(trade.base).getRate()));
+			mapos.get(trade.term).giveToMarket(amount, chf);
+			System.out.println("New balance: "+mapos.get(trade.base).getBalance().multiply(mapos.get(trade.base).getRate()));
+		} else if(mapos.get(trade.base).getBalance().divide(mapos.get(trade.base).getRate()).compareTo(mapos.get(trade.base).getInitial().multiply(new BigDecimal(1.6))) > 0 && count%200==0) {
+			//BigDecimal amount = mapos.get(trade.base).getInitial().multiply(new BigDecimal(0.8));
+			//bank.buy(new Trade(Currency.CHF, trade.base, amount));
+			//mapos.get(trade.term).receiveFromMarket(amount);
+			//mapos.get(trade.base).giveToMarket(amount, mapos.get(trade.term));
+		}
+
+
+
+
+		/*
 		BigDecimal times_chf = new BigDecimal(5);
 		BigDecimal times_other = new BigDecimal(2);
 		BigDecimal rate = new BigDecimal(1);
@@ -263,6 +323,7 @@ public class OurBBook implements BBook {
 			gbp.giveToClient(trade.quantity);
 		default:
 		}
+		*/
 		
 	}
 
