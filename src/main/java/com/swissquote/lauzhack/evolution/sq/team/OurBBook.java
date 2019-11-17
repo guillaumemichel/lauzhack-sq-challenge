@@ -2,18 +2,10 @@ package com.swissquote.lauzhack.evolution.sq.team;
 
 import java.math.BigDecimal;
 import java.math.MathContext;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
-import com.swissquote.lauzhack.evolution.api.BBook;
-import com.swissquote.lauzhack.evolution.api.Bank;
+import com.swissquote.lauzhack.evolution.api.*;
 import com.swissquote.lauzhack.evolution.api.Currency;
-import com.swissquote.lauzhack.evolution.api.Price;
-import com.swissquote.lauzhack.evolution.api.Trade;
 
 
 class CurrencyComparator implements Comparator<MyCurrency>{
@@ -32,6 +24,7 @@ class MyCurrency{
 	private BigDecimal rate;
 	private BigDecimal balance;
 	private BigDecimal markup;
+	private Queue<Trade> last2Trades;
 	
 	public MyCurrency(boolean isCHF, Currency currency, BigDecimal rate, BigDecimal balance, 
 			BigDecimal markup) {
@@ -42,6 +35,7 @@ class MyCurrency{
 		this.nbSamples = BigDecimal.ONE;
 		this.balance = balance;
 		this.markup = markup;
+		this.last2Trades = new ArrayDeque<>();
 	}
 	
 	public BigDecimal getBalance() { // CHF
@@ -58,6 +52,21 @@ class MyCurrency{
 
 	public BigDecimal getMarkup(){
 		return markup;
+	}
+
+	public BigDecimal demandPrediction() {
+		if(last2Trades.size() > 2) {
+			Queue<Trade> qCopy = new ArrayDeque<>(last2Trades);
+			Trade c_2 = qCopy.remove();
+			Trade c_1 = qCopy.remove();
+			return c_1.quantity.multiply(new BigDecimal(2)).subtract(c_2.quantity);
+		}
+		return null;
+	}
+
+	public void addToQueue(Trade trade) {
+		if(last2Trades.size() > 2) { last2Trades.remove(); }
+		last2Trades.offer(trade);
 	}
 	
 	public void giveToClient(BigDecimal amount) {
@@ -168,11 +177,11 @@ public class OurBBook implements BBook {
 		bank.buy(new Trade(Currency.USD, Currency.CHF, usdChange));
 		bank.buy(new Trade(Currency.GBP, Currency.CHF, gbpChange));
 
-		System.out.println("USD balance:"+usd.getBalance().divide(usd.getRate()));
+		/*System.out.println("USD balance:"+usd.getBalance().divide(usd.getRate()));
 		System.out.println("EUR balance:"+eur.getBalance().divide(eur.getRate()));
 		System.out.println("JPY balance:"+jpy.getBalance().divide(jpy.getRate()));
 		System.out.println("GBP balance:"+gbp.getBalance().divide(gbp.getRate()));
-		System.out.println("CHF balance:"+chf.getBalance());
+		System.out.println("CHF balance:"+chf.getBalance());*/
 
 	}
 
@@ -180,8 +189,8 @@ public class OurBBook implements BBook {
 	public void onTrade(Trade trade) {
 		// Raise on low risk
 		
-		System.out.println(usd.getBalance());
-		System.out.println(chf.getBalance());
+		//System.out.println(usd.getBalance());
+		//System.out.println(chf.getBalance());
 		
 		BigDecimal times_chf = new BigDecimal(5);
 		BigDecimal times_other = new BigDecimal(2);
@@ -223,6 +232,7 @@ public class OurBBook implements BBook {
 				bank.buy(new Trade(Currency.CHF, best.getCurrency(), trade.quantity.multiply(times_chf)));
 			}
 			chf.giveToClient(trade.quantity);
+			chf.addToQueue(trade);
 			break;
 		case EUR:
 			if(eur.getBalance().compareTo(trade.quantity) < 0) {
@@ -231,6 +241,7 @@ public class OurBBook implements BBook {
 				bank.buy(new Trade(Currency.EUR, Currency.CHF, trade.quantity.multiply(times_other)));
 			}
 			eur.giveToClient(trade.quantity);
+			eur.addToQueue(trade);
 			break;
 		case JPY:
 			if(jpy.getBalance().compareTo(trade.quantity) < 0) {
@@ -239,6 +250,7 @@ public class OurBBook implements BBook {
 				bank.buy(new Trade(Currency.JPY, Currency.CHF, trade.quantity.multiply(times_other)));
 			}
 			jpy.giveToClient(trade.quantity);
+			jpy.addToQueue(trade);
 			break;
 		case USD:
 			if(usd.getBalance().compareTo(trade.quantity) < 0) {
@@ -247,6 +259,7 @@ public class OurBBook implements BBook {
 				bank.buy(new Trade(Currency.USD, Currency.CHF, trade.quantity.multiply(times_other)));
 			}
 			usd.giveToClient(trade.quantity);
+			usd.addToQueue(trade);
 			break;
 		case GBP:
 			if(gbp.getBalance().compareTo(trade.quantity) < 0) {
@@ -255,6 +268,7 @@ public class OurBBook implements BBook {
 				bank.buy(new Trade(Currency.GBP, Currency.CHF, trade.quantity.multiply(times_other)));
 			}
 			gbp.giveToClient(trade.quantity);
+			gbp.addToQueue(trade);
 		default:
 		}
 	}
@@ -291,6 +305,48 @@ public class OurBBook implements BBook {
 			case GBP:
 				gbp.rateChange(new BigDecimal(1).divide(price.rate));
 			default:
+			}
+		}
+
+		decide(MarketProfile.SOMETHING);
+	}
+
+	private void decide(MarketProfile profile) {
+		if(usd != null){
+			//System.out.println("decide");
+			List<MyCurrency> currencies =  Arrays.asList(usd, eur, chf, jpy, gbp);
+			switch(profile) {
+				case SOMETHING:
+				case UNICORN:
+					MyCurrency mostRisky = currencies.get(0);
+					//System.out.println(mostRisky);
+					BigDecimal mostRiskyRisk = currencies.get(0).risk();
+					MyCurrency lessRisky = currencies.get(0);
+					BigDecimal lessRiskyRisk = currencies.get(0).risk();
+
+					for(MyCurrency c: currencies) {
+						if(c.risk().compareTo(mostRiskyRisk) > 0) { mostRisky = c; }
+						if(c.risk().compareTo(lessRiskyRisk) < 0) { lessRisky = c; }
+					}
+					//sell
+					if(mostRiskyRisk.compareTo(BigDecimal.ONE) > 0 && mostRisky.getBalance().doubleValue() > 2*mostRisky.demandPrediction().doubleValue()) {
+						BigDecimal pred = mostRisky.demandPrediction();
+						if(pred != null && pred.compareTo(BigDecimal.ZERO) > 0) { mostRisky.giveToMarket(pred, lessRisky); };
+					}
+					//buy
+					if(lessRiskyRisk.compareTo(BigDecimal.ONE.negate()) < 0 && lessRisky.getBalance().doubleValue() < 2*lessRisky.demandPrediction().doubleValue()) {
+						BigDecimal pred = lessRisky.demandPrediction();
+						if (pred != null && pred.compareTo(BigDecimal.ZERO) < 0) {
+							lessRisky.receiveFromMarket(pred);
+						}
+					}
+					break;
+				//case IT_WORKS:
+					//break;
+				case STARTUP:
+					break;
+				default:
+
 			}
 		}
 	}

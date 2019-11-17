@@ -27,11 +27,11 @@ public class App {
 		
 		// Create the application runner
 		SwissquoteEvolution app = new SwissquoteEvolutionBuilder().
-				profile(MarketProfile.SOMETHING).
+				profile(MarketProfile.UNICORN).
 				seed(1).
 				team("steaks").
 				bBook(ourBBook).
-				filePath("/mnt/guillaume/Documents/docs/lauzhack/lauzhack-sq-challenge/newstrat/").
+				filePath("/Users/Amandine_Evard/Desktop/Lauzhack2019/lauzhack-sq-challenge/").
 				interval(1).
 				steps(5000).
 				build();
@@ -41,7 +41,7 @@ public class App {
 		app.logBook();
 
 		// Display the result as JSON in console (also available in the file at "Path")
-		//System.out.println(app.logBook());
+		System.out.println(app.logBook());
 	}
 
 }
