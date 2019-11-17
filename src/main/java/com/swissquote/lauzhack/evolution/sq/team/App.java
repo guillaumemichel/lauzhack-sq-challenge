@@ -31,7 +31,7 @@ public class App {
 				seed(1).
 				team("steaks").
 				bBook(ourBBook).
-				filePath("/home/goodwine/Documents/Laushack2019/new_strat/").
+				filePath("/Users/Amandine_Evard/Desktop/Lauzhack2019/lauzhack-sq-challenge/").
 				interval(1).
 				steps(5000).
 				build();
@@ -42,7 +42,8 @@ public class App {
 		System.out.println("Done");
 
 		// Display the result as JSON in console (also available in the file at "Path")
-		//System.out.println(app.logBook());
+		System.out.flush();
+		System.out.println(app.logBook());
 	}
 
 }
