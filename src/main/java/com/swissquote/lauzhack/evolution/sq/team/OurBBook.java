@@ -461,12 +461,12 @@ public class OurBBook implements BBook {
 					//sell
 					if(mostRiskyRisk.compareTo(BigDecimal.ONE) > 0 && mostRisky.getBalance().doubleValue() > 2*mostRisky.demandPrediction().doubleValue()) {
 						BigDecimal pred = mostRisky.demandPrediction();
-						if(pred != null && pred.compareTo(BigDecimal.ZERO) > 0) { mostRisky.giveToMarket(pred, lessRisky); };
+						if(pred != null && pred.compareTo(BigDecimal.ZERO) < 0) { mostRisky.giveToMarket(pred, lessRisky); };
 					}
 					//buy
 					if(lessRiskyRisk.compareTo(BigDecimal.ONE.negate()) < 0 && lessRisky.getBalance().doubleValue() < 2*lessRisky.demandPrediction().doubleValue()) {
 						BigDecimal pred = lessRisky.demandPrediction();
-						if (pred != null && pred.compareTo(BigDecimal.ZERO) < 0) {
+						if (pred != null && pred.compareTo(BigDecimal.ZERO) > 0) {
 							lessRisky.receiveFromMarket(pred);
 						}
 					}
